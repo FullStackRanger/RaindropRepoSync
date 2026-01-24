@@ -1,9 +1,18 @@
-# Bookmarks to GitHub Sync
+# Raindrop.io Bookmark Export Tools
 
-A Python CLI tool that clones GitHub repositories from your Raindrop.io bookmark collections. This tool fetches bookmarks via the Raindrop API, filters for GitHub repository URLs, and batch-clones them locally for offline access or archival purposes.
+A collection of Python CLI tools for exporting and syncing bookmarks from Raindrop.io.
+
+## Tools
+
+### 1. GitHub Repository Cloner (`bookmarks_github.py`)
+Clones GitHub repositories from your Raindrop.io bookmark collections for offline access or archival purposes.
+
+### 2. Medium Bookmarks Exporter (`medium_bookmarks.py`)
+Exports Medium.com articles from your Raindrop.io collections to CSV format with author and title metadata.
 
 ## Features
 
+### GitHub Repository Cloner
 - Fetches bookmarks from any Raindrop.io collection via API
 - Automatically identifies and filters GitHub repository URLs
 - Supports both HTTPS and SSH clone URLs
@@ -12,6 +21,13 @@ A Python CLI tool that clones GitHub repositories from your Raindrop.io bookmark
 - Dry-run mode to preview actions
 - URL-only mode for listing without cloning
 - Skip existing repositories to avoid duplicates
+
+### Medium Bookmarks Exporter
+- Filters Medium.com articles from Raindrop collections (including custom domains)
+- Exports to CSV format with URL, author, title, and tags
+- Optional metadata fetching via web scraping for accurate author names
+- Supports dry-run mode
+- Configurable fetch delays to respect rate limits
 
 ## Prerequisites
 
@@ -25,7 +41,11 @@ A Python CLI tool that clones GitHub repositories from your Raindrop.io bookmark
 
 2. Install required Python dependencies:
 ```bash
+# For GitHub cloner
 pip install requests
+
+# For Medium exporter (additional dependency)
+pip install requests beautifulsoup4
 ```
 
 3. Get your Raindrop.io API token:
@@ -35,7 +55,9 @@ pip install requests
 
 ## Usage
 
-### Basic Usage
+### GitHub Repository Cloner
+
+#### Basic Usage
 
 ```bash
 # Set your token as an environment variable
@@ -45,7 +67,7 @@ export RAINDROP_TOKEN="your-token-here"
 python bookmarks_github.py --collection-id 12345678
 ```
 
-### Command-Line Options
+#### Command-Line Options
 
 ```bash
 # Specify token directly (alternative to env var)
@@ -64,6 +86,35 @@ python bookmarks_github.py --collection-id 12345678 --dry-run
 python bookmarks_github.py --collection-id 12345678 --dump-urls
 ```
 
+### Medium Bookmarks Exporter
+
+#### Basic Usage
+
+```bash
+# Export Medium bookmarks to CSV
+export RAINDROP_TOKEN="your-token-here"
+python medium_bookmarks.py --collection-id 12345678
+```
+
+#### Command-Line Options
+
+```bash
+# Specify token directly
+python medium_bookmarks.py --token YOUR_TOKEN --collection-id 12345678
+
+# Custom output filename
+python medium_bookmarks.py --collection-id 12345678 --output my_medium_articles.csv
+
+# Fetch author and title from Medium pages (slower but more accurate)
+python medium_bookmarks.py --collection-id 12345678 --fetch-metadata
+
+# Adjust delay between fetches (default: 0.5 seconds)
+python medium_bookmarks.py --collection-id 12345678 --fetch-metadata --delay 1.0
+
+# Dry run - preview what would be exported
+python medium_bookmarks.py --collection-id 12345678 --dry-run
+```
+
 ### Finding Your Collection ID
 
 1. Go to [Raindrop.io](https://app.raindrop.io)
@@ -72,13 +123,24 @@ python bookmarks_github.py --collection-id 12345678 --dump-urls
 
 ## How It Works
 
+### GitHub Repository Cloner
+
 1. **Fetch Bookmarks**: Paginates through the Raindrop API to retrieve all items in the specified collection
 2. **Filter URLs**: Identifies and normalizes GitHub repository URLs (e.g., `https://github.com/owner/repo`)
 3. **Deduplicate**: Removes duplicate URLs while preserving order
 4. **Clone**: Performs shallow clones (`--depth 1`) of each repository to the destination directory
 5. **Skip Existing**: Automatically skips repositories that already exist in the destination
 
+### Medium Bookmarks Exporter
+
+1. **Fetch Bookmarks**: Retrieves all items from the specified Raindrop collection
+2. **Filter Medium URLs**: Identifies Medium.com articles including custom domains (towardsdatascience.com, betterprogramming.pub, etc.)
+3. **Extract Metadata**: Optionally scrapes author and title information from Medium pages
+4. **Export to CSV**: Saves results with columns: URL, Writer (author), Subject (title), Tags
+
 ## Example Output
+
+### GitHub Cloner
 
 ```
 Found 15 GitHub repos. Cloning into: raindrop_github_repos
@@ -87,11 +149,26 @@ SKIP (exists): raindrop_github_repos/repo2
 CLONE: git clone --depth 1 https://github.com/user/repo3.git raindrop_github_repos/repo3
 ```
 
+### Medium Exporter
+
+```
+Fetching items from collection 12345678...
+Found 150 total bookmarks.
+Found 23 Medium articles.
+Saved 23 records to: medium_bookmarks.csv
+```
+
 ## Limitations
 
+### GitHub Cloner
 - Only works with public GitHub repositories (unless you have Git credentials configured)
 - Only detects standard GitHub repo URLs (e.g., `https://github.com/owner/repo`)
 - Performs shallow clones by default (full history not included)
+
+### Medium Exporter
+- Metadata fetching requires web scraping, which may be slower and subject to rate limits
+- Some custom Medium domains may not be detected (can be added to MEDIUM_CUSTOM_DOMAINS list)
+- Author extraction from URLs works only for standard @username patterns
 
 ## API Rate Limits
 
