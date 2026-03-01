@@ -1,0 +1,17 @@
+[project]
+name = "automation-tools"
+version = "0.1.0"
+description = "Personal automation scripts"
+requires-python = ">=3.12"
+dependencies = ["httpx"]
+
+[project.scripts]
+raindrop-github-sync = "automation_tools.raindrop_github_sync:main"
+network-scan = "automation_tools.network_scan:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/automation_tools"]
