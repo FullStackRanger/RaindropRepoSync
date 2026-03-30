@@ -128,7 +128,7 @@ def canonical_clone_url(url: str) -> str:
 
 
 def clone_or_pull(repo_url: str, target_dir: Path) -> Path | None:
-    """Clone a repo if absent, otherwise fast-forward pull. Returns repo path."""
+    """Clone a repo if absent, otherwise skip. Returns repo path."""
     parsed = parse_github_url(repo_url)
     if not parsed:
         log.warning("Skipping invalid GitHub URL: %s", repo_url)
@@ -139,14 +139,8 @@ def clone_or_pull(repo_url: str, target_dir: Path) -> Path | None:
     repo_path = target_dir / repo
 
     if (repo_path / ".git").is_dir():
-        log.info("Pulling %s/%s", owner, repo)
-        result = subprocess.run(
-            ["git", "-C", str(repo_path), "pull", "--ff-only"],
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode != 0:
-            log.error("Pull failed for %s/%s: %s", owner, repo, result.stderr.strip())
+        log.debug("Skipping existing repo %s/%s", owner, repo)
+        return repo_path
     else:
         log.info("Cloning %s/%s", owner, repo)
         result = subprocess.run(
@@ -187,6 +181,54 @@ def sync_repos(
 # --- README generation -------------------------------------------------------
 
 
+def get_repo_description(repo_path: Path) -> str:
+    """Extract description from README.md in the repository."""
+    readme_paths = [
+        repo_path / "README.md",
+        repo_path / "readme.md",
+        repo_path / "Readme.md",
+        repo_path / "README",
+    ]
+    
+    for readme_path in readme_paths:
+        if readme_path.exists():
+            try:
+                content = readme_path.read_text(encoding="utf-8", errors="ignore")
+                # Get first paragraph after title
+                lines = [line.strip() for line in content.split("\n") if line.strip()]
+                
+                # Skip title lines (usually start with #)
+                description_lines = []
+                in_description = False
+                
+                for line in lines:
+                    # Skip markdown headers, badges, and images
+                    if line.startswith("#"):
+                        in_description = True
+                        continue
+                    if line.startswith("[") and "]" in line and "(" in line:
+                        continue  # Skip badges and images
+                    if line.startswith("!"):
+                        continue  # Skip images
+                    
+                    if in_description and line and not line.startswith("##"):
+                        description_lines.append(line)
+                        # Get first meaningful paragraph
+                        if len(" ".join(description_lines)) > 100:
+                            break
+                
+                if description_lines:
+                    desc = " ".join(description_lines)
+                    # Truncate to reasonable length
+                    if len(desc) > 200:
+                        desc = desc[:197] + "..."
+                    return desc
+            except Exception as e:
+                log.debug("Failed to read README for %s: %s", repo_path.name, e)
+    
+    return "No description available"
+
+
 def generate_readme(target_dir: Path, raindrops: list[dict]) -> None:
     """Write a README.md listing all cloned repos with descriptions."""
     meta_by_repo: dict[str, dict[str, str]] = {}
@@ -196,7 +238,7 @@ def generate_readme(target_dir: Path, raindrops: list[dict]) -> None:
             _, repo = parsed
             meta_by_repo[repo] = {
                 "url": canonical_clone_url(rd["link"]),
-                "description": rd.get("excerpt") or rd.get("note") or "",
+                "raindrop_description": rd.get("excerpt") or rd.get("note") or "",
             }
 
     repos = sorted(
@@ -206,13 +248,19 @@ def generate_readme(target_dir: Path, raindrops: list[dict]) -> None:
     )
 
     lines = ["# GitHub Repos", "", "Repos synced from Raindrop.io.", ""]
+    
+    log.info("Extracting repo descriptions...")
     for repo in repos:
         meta = meta_by_repo.get(repo, {})
         url = meta.get("url", f"https://github.com/?/{repo}")
-        desc = meta.get("description", "")
+        
+        # Get description from the actual repository
+        repo_path = target_dir / repo
+        repo_desc = get_repo_description(repo_path)
+        
         line = f"- [**{repo}**]({url})"
-        if desc:
-            line += f" — {desc}"
+        if repo_desc:
+            line += f" — {repo_desc}"
         lines.append(line)
 
     readme_path = target_dir / "README.md"
