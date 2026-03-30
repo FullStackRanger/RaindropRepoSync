@@ -1,0 +1,54 @@
+[tool.poetry]
+name = "medium-digest-agent"
+version = "0.1.0"
+description = "AI-powered agent that curates and summarizes Medium articles across key technical interests"
+authors = ["Terry <terry@example.com>"]
+readme = "README.md"
+packages = [{include = "medium_digest", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+feedparser = "*"
+requests = "*"
+anthropic = "*"
+python-dateutil = "^2.9.0.post0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+black = "^24.0.0"
+ruff = "^0.3.0"
+pre-commit = "^3.6.0"
+
+[tool.poetry.scripts]
+medium-digest = "medium_digest.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ['py312']
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+]
+ignore = [
+    "E501", # line too long, handled by black
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
