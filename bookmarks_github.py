@@ -44,6 +44,11 @@ def raindrop_request(session: requests.Session, base_url: str, token: str, path:
     r.raise_for_status()
     return r.json()
 
+def fetch_all_collections(session, base_url, token):
+    """Fetch all collections for the authenticated user."""
+    data = raindrop_request(session, base_url, token, "/collections")
+    return data.get("items", [])
+
 def fetch_collection_items(session, base_url, token, collection_id: int, per_page=50, max_pages=200):
     """Paginate through collection items."""
     items = []
@@ -51,6 +56,22 @@ def fetch_collection_items(session, base_url, token, collection_id: int, per_pag
         data = raindrop_request(
             session, base_url, token,
             f"/raindrops/{collection_id}",
+            params={"page": page, "perpage": per_page}
+        )
+        batch = data.get("items", [])
+        if not batch:
+            break
+        items.extend(batch)
+        time.sleep(0.1)  # be polite
+    return items
+
+def fetch_all_bookmarks(session, base_url, token, per_page=50, max_pages=200):
+    """Fetch all bookmarks from all collections (collection_id=0 returns all)."""
+    items = []
+    for page in range(0, max_pages):
+        data = raindrop_request(
+            session, base_url, token,
+            "/raindrops/0",  # 0 = all bookmarks
             params={"page": page, "perpage": per_page}
         )
         batch = data.get("items", [])
@@ -77,9 +98,10 @@ def clone_repo(clone_url: str, dest_dir: str, dry_run: bool):
     subprocess.check_call(cmd)
 
 def main():
-    ap = argparse.ArgumentParser(description="Clone GitHub repos from a Raindrop.io collection via API.")
+    ap = argparse.ArgumentParser(description="Clone GitHub repos from Raindrop.io bookmarks via API.")
     ap.add_argument("--token", default=os.getenv("RAINDROP_TOKEN"), help="Raindrop API token (or set RAINDROP_TOKEN).")
-    ap.add_argument("--collection-id", type=int, required=True, help="Raindrop collection ID (numeric).")
+    ap.add_argument("--collection-id", type=int, help="Raindrop collection ID (numeric). If omitted, fetches ALL bookmarks.")
+    ap.add_argument("--all", action="store_true", help="Explicitly fetch all bookmarks from all collections.")
     ap.add_argument("--dest", default="raindrop_github_repos", help="Destination folder for clones.")
     ap.add_argument("--ssh", action="store_true", help="Use SSH clone URLs (git@github.com:owner/repo.git).")
     ap.add_argument("--dry-run", action="store_true", help="Print actions without cloning.")
@@ -95,7 +117,13 @@ def main():
     base_url = "https://api.raindrop.io/rest/v1"
     session = requests.Session()
 
-    items = fetch_collection_items(session, base_url, args.token, args.collection_id)
+    # Fetch bookmarks - either from specific collection or all
+    if args.collection_id:
+        print(f"Fetching bookmarks from collection ID {args.collection_id}...")
+        items = fetch_collection_items(session, base_url, args.token, args.collection_id)
+    else:
+        print("Fetching ALL bookmarks from all collections...")
+        items = fetch_all_bookmarks(session, base_url, args.token)
 
     urls = []
     for it in items:

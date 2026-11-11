@@ -9,12 +9,13 @@ A collection of Python automation tools for personal productivity and content ma
 Syncs GitHub repositories from your Raindrop.io bookmark collections to a local directory.
 
 **Features:**
-- Fetches bookmarks from any Raindrop.io collection via API
-- Automatically identifies and filters GitHub repository URLs
-- Clones repositories in parallel for faster syncing
+- Fetches bookmarks from **all collections** or a specific Raindrop.io collection via API
+- Automatically identifies and filters GitHub repository URLs from bookmarks
+- Clones repositories with shallow clone (--depth 1) for faster syncing
 - Skips existing repositories to avoid duplicates
-- Generates comprehensive README with repo descriptions extracted from each project
-- Dry-run mode to preview actions
+- Supports both HTTPS and SSH clone URLs
+- Dry-run mode to preview actions without cloning
+- URL dump mode to just list GitHub repos found
 
 **Installation:**
 ```bash
@@ -27,14 +28,20 @@ pip install -e .
 # Set your token
 export RAINDROP_TOKEN="your-token-here"
 
-# Sync repos (defaults to ~/Public/GitHub)
-raindrop-github-sync
+# Fetch ALL bookmarks from all collections (default behavior)
+python bookmarks_github.py --dest ~/Public/GitHub
 
-# Custom options
-raindrop-github-sync --target-dir ./my-repos --collection-path "Personal/Tech/Projects" --workers 8
+# Fetch from a specific collection only
+python bookmarks_github.py --collection-id 12345 --dest ~/Public/GitHub
 
-# Dry run
-raindrop-github-sync --dry-run
+# Dry run to preview what would be cloned
+python bookmarks_github.py --dry-run
+
+# Use SSH clone URLs instead of HTTPS
+python bookmarks_github.py --ssh
+
+# Just dump the GitHub URLs found (no cloning)
+python bookmarks_github.py --dump-urls
 ```
 
 ### 2. Medium Daily Digest Agent
