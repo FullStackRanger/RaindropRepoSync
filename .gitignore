@@ -28,6 +28,12 @@ ENV/
 venv/
 env/
 
+# Swift Package Manager / Xcode
+.build/
+.swiftpm/
+xcuserdata/
+DerivedData/
+
 # Testing
 .pytest_cache/
 .coverage
