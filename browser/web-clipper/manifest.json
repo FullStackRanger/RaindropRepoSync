@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "Send to Web Clipper",
+  "version": "1.0.0",
+  "description": "Sends the current tab to the Toolbelt web clipper (web_clipper.py) running on this computer.",
+  "action": {
+    "default_title": "Clip this page to Markdown",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": { "default": "Alt+Shift+C", "mac": "Alt+Shift+C" },
+      "description": "Send the current tab to Web Clipper"
+    }
+  },
+  "permissions": ["activeTab"],
+  "host_permissions": ["http://127.0.0.1:47811/*"],
+  "background": {
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "web-clipper@toolbelt.local",
+      "strict_min_version": "121.0"
+    }
+  }
+}
