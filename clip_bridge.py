@@ -160,9 +160,13 @@ class ClipServer:
             self._server = None
 
 
+# System/env proxies (macOS network settings, http_proxy) must not see loopback requests.
+_LOCAL_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
 def _get(port: int, path: str, timeout: float) -> Optional[dict]:
     try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}{path}", timeout=timeout) as resp:
+        with _LOCAL_OPENER.open(f"http://127.0.0.1:{port}{path}", timeout=timeout) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except (OSError, ValueError, urllib.error.URLError):
         return None

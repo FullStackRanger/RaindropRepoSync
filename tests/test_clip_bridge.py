@@ -1,6 +1,7 @@
 import http.client
 import json
 import threading
+import urllib.request
 
 import pytest
 
@@ -73,6 +74,18 @@ def test_send_url_to_running_instance(server):
     assert is_running(port)
     assert send_url("https://example.com/x y", port)
     assert received == ["https://example.com/x y"]
+
+
+def test_send_url_ignores_proxy_settings(server, monkeypatch):
+    _, port, received, _ = server
+    for var in ("http_proxy", "HTTP_PROXY", "all_proxy", "ALL_PROXY"):
+        monkeypatch.setenv(var, "http://127.0.0.1:9")
+    monkeypatch.delenv("no_proxy", raising=False)
+    monkeypatch.delenv("NO_PROXY", raising=False)
+    monkeypatch.setattr(urllib.request, "_opener", None)
+    assert is_running(port)
+    assert send_url("https://example.com/p", port)
+    assert received == ["https://example.com/p"]
 
 
 def test_send_url_when_nothing_is_listening():
