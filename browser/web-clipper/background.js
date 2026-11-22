@@ -1,4 +1,5 @@
-// Must match the port web_clipper.py listens on (--port / WEB_CLIPPER_PORT) and host_permissions.
+// Must match the port the clipper listens on (web_clipper.py --port, the macOS app's Settings, or
+// WEB_CLIPPER_PORT) and host_permissions.
 const CLIPPER = "http://127.0.0.1:47811";
 
 function flash(tabId, text, color, title) {
@@ -23,6 +24,6 @@ chrome.action.onClicked.addListener(async (tab) => {
     flash(tab.id, "OK", "#1a7f37", "Sent to Web Clipper");
   } catch (err) {
     flash(tab.id, "!", "#cf222e",
-      "Web Clipper isn't running. Start it with: python web_clipper.py (" + err.message + ")");
+      "Web Clipper isn't running. Open the Web Clipper app (or run python web_clipper.py) (" + err.message + ")");
   }
 });
