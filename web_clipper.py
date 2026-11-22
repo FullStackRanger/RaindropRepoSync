@@ -326,7 +326,7 @@ class App:
         self.save_btn.configure(state="normal")
         for btn in (self.vault_btn, self.reveal_btn, self.obsidian_btn):
             btn.configure(state="disabled")
-        self.status_var.set("Review the note, then Save (\u2318S / Ctrl+S).")
+        self.status_var.set("Review the note, then Save (%s)." % ("\u2318S" if sys.platform == "darwin" else "Ctrl+S"))
         self._log(f"Clipped: {article.title}")
         self._next_pending()
 

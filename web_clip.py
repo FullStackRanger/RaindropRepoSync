@@ -232,9 +232,16 @@ def extract_metadata(root: Node) -> Dict[str, str]:
     def first(*values: str) -> str:
         return next((v for v in values if v), "")
 
+    h1_text = _clean(h1.text()) if h1 else ""
+    title = first(meta.get("og:title"), meta.get("twitter:title"), ld.get("headline"),
+                  _clean(title_node.text()) if title_node else "", h1_text)
+    # "Markdown - Wikipedia" -> "Markdown" when the page's <h1> is the bare title.
+    if h1_text and title != h1_text and title.startswith(h1_text) \
+            and re.match(r"\s+[-|\u2013\u2014\u00b7:]\s", title[len(h1_text):]):
+        title = h1_text
+
     return {
-        "title": first(meta.get("og:title"), meta.get("twitter:title"), ld.get("headline"),
-                       _clean(title_node.text()) if title_node else "", _clean(h1.text()) if h1 else ""),
+        "title": title,
         "author": first(meta.get("author"), ld.get("author"), meta.get("article:author", "")
                         if not meta.get("article:author", "").startswith("http") else ""),
         "published": first(_iso_date(meta.get("article:published_time", "")), ld.get("published", ""),
@@ -256,11 +263,12 @@ _NEGATIVE = {"comment", "comments", "share", "sharing", "social", "related", "si
              "sponsored", "promo", "advert", "advertisement", "ad", "ads", "newsletter", "subscribe",
              "subscription", "signup", "cookie", "cookies", "consent", "popup", "modal", "banner",
              "breadcrumb", "breadcrumbs", "menu", "nav", "navbar", "navigation", "masthead", "disqus",
-             "outbrain", "taboola", "widget", "toolbar", "footer", "skip", "paywall", "recirc",
-             "navbox", "ambox", "editsection", "noprint", "catlinks", "headerlink"}
+             "outbrain", "taboola", "widget", "toolbar", "footer", "skip", "paywall", "recirc"}
+# Removed even when a positive token is also present (e.g. Wikipedia's "ambox ambox-content").
+_ALWAYS_NEGATIVE = {"ambox", "navbox", "editsection", "noprint", "catlinks", "headerlink", "hatnote"}
 _POSITIVE = {"article", "body", "content", "entry", "main", "post", "text", "story", "prose",
              "markdown", "blog", "hentry"}
-_KEEP_TAGS = {"#root", "html", "body", "article", "main", "pre", "code", "table"}
+_KEEP_TAGS = {"#root", "html", "body", "article", "main", "pre", "code"}
 
 
 def _tokens(node: Node) -> set:
@@ -286,7 +294,7 @@ def _strip_boilerplate(root: Node) -> None:
             continue
         tokens = _tokens(node)
         if (node.tag in _DROP_TAGS or _is_hidden(node) or node.attrs.get("role") in ("navigation", "dialog")
-                or (tokens & _NEGATIVE and not tokens & _POSITIVE)):
+                or tokens & _ALWAYS_NEGATIVE or (tokens & _NEGATIVE and not tokens & _POSITIVE)):
             doomed.append(node)
     for node in doomed:
         node.remove()

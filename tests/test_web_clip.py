@@ -147,6 +147,20 @@ def test_title_falls_back_to_title_tag_then_h1_then_host():
     assert extract_article("<p>x</p>", "https://a.com/page").title == "a.com"
 
 
+def test_site_suffix_dropped_when_h1_is_the_bare_title():
+    html = ('<meta property="og:title" content="Markdown - Wikipedia"><h1>Markdown</h1><p>x</p>')
+    assert extract_article(html, "https://en.wikipedia.org/wiki/Markdown").title == "Markdown"
+    html = '<title>Markdown tips and tricks</title><h1>Markdown</h1><p>x</p>'
+    assert extract_article(html, "https://a.com").title == "Markdown tips and tricks"
+
+
+def test_always_negative_classes_win_over_positive_ones():
+    body = "<p>" + "Real article text, with commas, repeated. " * 10 + "</p>"
+    html = (f'<article><table class="metadata ambox ambox-content"><tr><td>Needs sources</td></tr></table>'
+            f"{body}</article>")
+    assert "Needs sources" not in extract_article(html, "https://a.com").markdown
+
+
 def test_scoring_picks_densest_block_when_no_article_tag():
     filler = "This sentence has words, commas, and enough length to count as content. " * 3
     html = (f'<body><div id="menu"><a href="/a">A</a> <a href="/b">B</a></div>'
