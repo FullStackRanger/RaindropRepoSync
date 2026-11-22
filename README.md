@@ -14,6 +14,8 @@ A collection of Python automation tools for personal productivity and content ma
 | [`web_clip.py`](web_clip.py) | Library for `web_clipper.py`: fetch a page, extract the main article, convert it to Markdown with front matter. |
 | [`clip_storage.py`](clip_storage.py) | Library for `web_clipper.py`: safe file names, saving, Obsidian vault copy, front-matter tags, remembered settings. |
 | [`clip_bridge.py`](clip_bridge.py) | Library for `web_clipper.py`: localhost listener (127.0.0.1:47811) that receives URLs from the browser button. |
+| [`clip_cli.py`](clip_cli.py) | JSON command-line interface to the clipper engine (clip, save, vault copy, settings, browser-button listener); used by the macOS app. |
+| [`macos/WebClipper/`](macos/WebClipper/) | Native macOS SwiftUI Web Clipper app (replaces the tkinter window on macOS); `build-app.sh` builds `Web Clipper.app`. |
 | [`browser/web-clipper/`](browser/web-clipper/) | Chrome/Firefox (Manifest V3) "Send to Web Clipper" button extension; a bookmarklet is also available. |
 
 ## Tools
@@ -114,7 +116,7 @@ python web_clipper.py URL --no-gui --save-to ~/Notes --tags reading,ai   # no wi
 
 Shortcuts: Return in the URL box clips, ⌘S / Ctrl+S saves, ⌘L / Ctrl+L focuses the URL box.
 
-Uses only the standard library (no new dependencies). Logic lives in `web_clip.py`, `clip_storage.py` and `clip_bridge.py`, tested in `tests/test_web_clip.py`, `tests/test_clip_storage.py` and `tests/test_clip_bridge.py`.
+Uses only the standard library (no new dependencies). Logic lives in `web_clip.py`, `clip_storage.py` and `clip_bridge.py` (plus the JSON front end `clip_cli.py` used by the macOS app), tested in `tests/test_web_clip.py`, `tests/test_clip_storage.py`, `tests/test_clip_bridge.py` and `tests/test_clip_cli.py`.
 
 #### macOS setup
 
@@ -140,6 +142,26 @@ Uses only the standard library (no new dependencies). Logic lives in `web_clip.p
    </dict></plist>
    ```
 
+#### macOS app (SwiftUI)
+
+`macos/WebClipper/` is a native SwiftUI front end with the same features: URL from the toolbar, clipboard (**Paste and Clip**, ⇧⌘V) or the browser button; editable title, tag chips and Markdown with a preview; save to Downloads / Documents / any folder; copy into an Obsidian vault folder and **Open in Obsidian**. Save and vault options live in the inspector (toggle it from the toolbar). It uses Liquid Glass on macOS 26+ and regular materials on macOS 14–15, and follows light/dark mode.
+
+The Python files stay the engine: the app runs `clip_cli.py` for every action, so notes are byte-for-byte the same as from `web_clipper.py`, and both share `~/.config/toolbelt/web_clipper.json`. The app also runs `clip_cli.py serve`, the same 127.0.0.1:47811 listener, so the browser extension, the bookmarklet and `python3 web_clipper.py URL` all hand pages to it. Run only one of the two apps at a time (they share the port).
+
+1. **Requirements:** macOS 14+, Python 3.9+ (`/usr/bin/python3` from the Command Line Tools works; Homebrew or python.org Python is used first if installed) and Swift 5.10+ (Command Line Tools or Xcode). No Python packages are needed.
+2. **Build:** `macos/WebClipper/build-app.sh` builds a release binary with `swift build`, bundles the four engine files into `dist/Web Clipper.app/Contents/Resources/engine`, and signs it ad hoc. Add `--install` to copy it into `~/Applications` and register the `webclipper://` URL scheme. Rebuild after changing the Python files so the bundle gets the new copies.
+3. **First launch:** the app is signed ad hoc, not notarised. If macOS blocks it, Control-click it in Finder and choose **Open** (or allow it under *System Settings → Privacy & Security*).
+4. **Python interpreter:** if the app says the engine is unavailable, open **Web Clipper → Settings…** and enter the path to `python3` (or set `WEB_CLIPPER_PYTHON`). The browser-button port is also set there.
+5. **Develop:** `cd macos/WebClipper && swift run` runs the app against the engine files in this repo checkout. To open it in Xcode, open `macos/WebClipper/Package.swift`.
+
+**`webclipper://` links:** `webclipper://clip?url=<percent-encoded URL>` opens the app (launching it if needed) and clips the page. A bookmarklet that launches the app even when it is closed:
+
+```text
+javascript:location.href='webclipper://clip?url='+encodeURIComponent(location.href)
+```
+
+The browser asks once whether to open *Web Clipper*. As with the listener, links only load a preview; nothing is saved until you press **Save Note**.
+
 **Port:** the default is 47811. To change it, run `web_clipper.py --port N` (or set `WEB_CLIPPER_PORT`), and update `CLIPPER` in `browser/web-clipper/background.js` and `host_permissions` in its `manifest.json` (the bookmarklet from **Copy bookmarklet** uses the current port).
 
 **Security:** the listener binds to 127.0.0.1 only, rejects requests whose `Origin` is a web page or whose `Host` isn't localhost, and accepts only http(s) URLs. A URL it receives is only fetched and previewed; nothing is saved until you press **Save note**.
@@ -156,6 +178,8 @@ Uses only the standard library (no new dependencies). Logic lives in `web_clip.p
 toolbelt/
 ├── browser/
 │   └── web-clipper/              # Browser button extension for web_clipper.py
+├── macos/
+│   └── WebClipper/               # SwiftUI macOS app for the web clipper
 ├── scripts/
 │   └── python/
 │       ├── automation-tools/     # Raindrop sync and other utilities

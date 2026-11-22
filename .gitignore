@@ -51,3 +51,7 @@ medium-digests/
 
 # Environment variables
 .env
+
+# Swift
+.build/
+.swiftpm/
